@@ -30,6 +30,8 @@ import { Ionicons } from '@expo/vector-icons';
 // FIREBASE IMPORTS
 import { collection, doc, getDocs, onSnapshot, orderBy, query, updateDoc, where } from 'firebase/firestore';
 import { Colors } from '../constants/theme';
+import { useAuth } from '../constants/AuthContext';
+import { canManageOrders, canSeeOrder } from '../constants/roles';
 import { useAppTheme } from '../constants/ThemeContext';
 import { db } from '../firebaseConfig';
 
@@ -51,6 +53,10 @@ export default function OrdersScreen() {
 
   const { appTheme } = useAppTheme();
   const currentColors = Colors[appTheme] || Colors.light;
+  const { user, profile, role } = useAuth();
+  const canChangeStatus = canManageOrders(role);
+  const uid = user?.uid;
+  const staffName = profile?.name;
 
   const { width, height } = useWindowDimensions();
   const isLandscape = width > height;
@@ -137,6 +143,7 @@ export default function OrdersScreen() {
 
       snapshot.forEach((docSnap) => {
         const data = docSnap.data();
+        if (!canSeeOrder(role, data, uid, staffName)) return;
         const status = data.status || 'Ongoing';
        
         let orderDate = new Date();
@@ -190,6 +197,7 @@ export default function OrdersScreen() {
             appliedPromotions: data.appliedPromotions || [],
             totalAmount: data.totalAmount || 0,
             cashierName: data.cashierName || 'Unknown Cashier',
+            cashierUid: data.cashierUid || null,
             cashTendered: data.cashTendered ?? null,
             changeGiven: data.changeGiven ?? null,
           };
@@ -216,7 +224,7 @@ export default function OrdersScreen() {
     });
    
     return () => unsubscribe();
-  }, []);
+  }, [role, uid, staffName]);
 
   if (!fontsLoaded) return null;
 
@@ -253,6 +261,7 @@ export default function OrdersScreen() {
   };
 
   const openStatusChangeModal = (order) => {
+    if (!canChangeStatus) return;
     const ageMs = Date.now() - order.createdAt.getTime();
     if (ageMs > 24 * 60 * 60 * 1000) {
       Alert.alert('Time Limit Reached', 'Order status can only be changed within 24 hours of the transaction.');
@@ -263,7 +272,7 @@ export default function OrdersScreen() {
   };
 
   const changeOrderStatus = async (newStatus) => {
-    if (!statusChangeTarget) return;
+    if (!statusChangeTarget || !canChangeStatus) return;
     try {
       LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
       const orderRef = doc(db, 'salestransaction', statusChangeTarget.docId);
@@ -534,16 +543,18 @@ export default function OrdersScreen() {
                       </View>
                     </TouchableOpacity>
 
-                    <View style={styles.orderActionCol}>
-                      <TouchableOpacity
-                        style={styles.changeStatusBtn}
-                        activeOpacity={0.8}
-                        onPress={() => openStatusChangeModal(order)}
-                      >
-                        <Ionicons name="swap-horizontal-outline" size={s(18)} color="#FFFFFF" />
-                        <Text style={styles.changeStatusBtnText}>Status</Text>
-                      </TouchableOpacity>
-                    </View>
+                    {canChangeStatus && (
+                      <View style={styles.orderActionCol}>
+                        <TouchableOpacity
+                          style={styles.changeStatusBtn}
+                          activeOpacity={0.8}
+                          onPress={() => openStatusChangeModal(order)}
+                        >
+                          <Ionicons name="swap-horizontal-outline" size={s(18)} color="#FFFFFF" />
+                          <Text style={styles.changeStatusBtnText}>Status</Text>
+                        </TouchableOpacity>
+                      </View>
+                    )}
                   </View>
                 );
               })}

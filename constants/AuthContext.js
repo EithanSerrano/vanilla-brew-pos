@@ -32,6 +32,8 @@ export function AuthProvider({ children }) {
 
       setUser(firebaseUser);
 
+      if (firebaseUser) setLoading(true);
+
       if (!firebaseUser) {
         setProfile(null);
         setLoading(false);

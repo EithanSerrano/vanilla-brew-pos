@@ -27,6 +27,8 @@ import { Ionicons } from '@expo/vector-icons';
 import { signOut } from 'firebase/auth';
 import { collection, doc, onSnapshot, query, updateDoc, where } from 'firebase/firestore';
 import { Colors } from '../constants/theme';
+import { useAuth } from '../constants/AuthContext';
+import { canSeeOrder } from '../constants/roles';
 import { useAppTheme } from '../constants/ThemeContext'; // ← shared theme
 import { auth, db } from '../firebaseConfig';
 
@@ -34,6 +36,7 @@ export default function HomeScreen() {
   const router = useRouter();
 
   // --- THEME LOGIC (now shared across all screens) ---
+  const { user: authUser, profile, role } = useAuth();
   const { appTheme } = useAppTheme();
   const theme = appTheme; // 'light' | 'dark'
   const currentColors = Colors[theme];
@@ -95,11 +98,14 @@ export default function HomeScreen() {
     const q = query(collection(db, 'salestransaction'), where('status', '==', 'Ongoing'));
     const unsubscribe = onSnapshot(
       q,
-      (snapshot) => setPendingCount(snapshot.docs.length),
+      (snapshot) =>
+        setPendingCount(
+          snapshot.docs.filter((d) => canSeeOrder(role, d.data(), authUser?.uid, profile?.name)).length
+        ),
       (error) => console.error('Error fetching pending orders: ', error)
     );
     return () => unsubscribe();
-  }, []);
+  }, [role, authUser?.uid, profile?.name]);
 
   useEffect(() => {
     const user = auth.currentUser;

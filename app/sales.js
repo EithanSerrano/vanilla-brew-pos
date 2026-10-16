@@ -668,6 +668,7 @@ export default function SalesScreen() {
           changeGiven: parseFloat(changeAmount.toFixed(2)),
         }),
         cashierName: cashierName,
+        cashierUid: getAuth().currentUser?.uid || null,
         ...(gcash.status === 'paid' && gcash.paymentId && { gatewayPaymentId: gcash.paymentId, gatewayProvider: GCASH_PROVIDER_LABEL }),
         status: 'Ongoing'
       };

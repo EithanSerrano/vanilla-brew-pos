@@ -36,3 +36,14 @@ export const hasRole = (role, allowed) => {
   const list = Array.isArray(allowed) ? allowed : [allowed];
   return list.includes(normalizeRole(role));
 };
+
+// Permissions that views can check instead of comparing role names.
+export const canManageOrders = (role) => hasRole(role, [ROLES.ADMIN, ROLES.MANAGER]);
+
+// Employees only see orders they rang up. Older orders have no cashierUid,
+// so fall back to the cashier name stored on the order.
+export const canSeeOrder = (role, order, uid, name) => {
+  if (canManageOrders(role)) return true;
+  if (order.cashierUid) return order.cashierUid === uid;
+  return !!name && order.cashierName === name;
+};
