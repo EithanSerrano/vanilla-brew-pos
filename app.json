@@ -1,0 +1,47 @@
+{
+  "expo": {
+    "name": "Vanilla Brew",
+    "slug": "vanilla-brew-sms",
+    "scheme": "vanillabrew",
+    "version": "1.0.0",
+    "orientation": "default",
+    "icon": "./assets/images/company-logo.png",
+    "userInterfaceStyle": "dark",
+    "splash": {
+      "image": "./assets/images/sms-logo.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#202020"
+    },
+    "ios": {
+      "supportsTablet": true,
+      "infoPlist": {
+        "UIStatusBarHidden": true,
+        "UIViewControllerBasedStatusBarAppearance": false
+      }
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/images/Logo.png",
+        "backgroundColor": "#202020"
+      },
+      "package": "com.renz.vanillabrew"
+    },
+    "androidStatusBar": {
+      "hidden": true
+    },
+    "plugins": [
+      "expo-router",
+      "expo-font"
+    ],
+    "experiments": {
+      "typedRoutes": true
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "25d82345-7264-44ee-be80-29837792d15a"
+      },
+      "gcashSimulate": true
+    }
+  }
+}
