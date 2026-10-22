@@ -303,7 +303,7 @@ export default function AboutScreen() {
             content={
               <View>
                 <Text style={styles.contentText}>
-                  This Shop Management System was custom-built for VNL Brew Cafe by <Text style={styles.bold}>3rd Year BSCS Students</Text> from the <Text style={styles.bold}>Technological Institute of the Philippines - Quezon City</Text>.
+                  This Shop Management System was custom-built for VNL Brew Cafe by <Text style={styles.bold}>4th Year BSCS Students</Text> from the <Text style={styles.bold}>Technological Institute of the Philippines - Quezon City</Text>.
                   {"\n\n"}
                   <Text style={styles.bold}>Lead Developers:</Text>
                   {"\n"}• <Text style={styles.bold}>Alcanzo, Renz A.</Text>
@@ -312,6 +312,12 @@ export default function AboutScreen() {
                   {"\n"}  Email: qcjenueva@tip.edu.ph
                   {"\n"}• <Text style={styles.bold}>Sarmiento, Joaquín Reymond G.</Text>
                   {"\n"}  Email: qjrgsarmiento@tip.edu.ph
+                  {"\n"}• <Text style={styles.bold}>Serrano, Eithan Mckale L.</Text>
+                  {"\n"}  Email: qemlserrano@tip.edu.ph
+                  {"\n"}• <Text style={styles.bold}>Santos, Isaac Marcus G.</Text>
+                  {"\n"}  Email: qimgsantos@tip.edu.ph
+                  {"\n"}• <Text style={styles.bold}>Cerafica, Emmanuel F.</Text>
+                  {"\n"}  Email: qefcerafica@tip.edu.ph
                   {"\n\n"}
                   <Text style={styles.bold}>Need Help or Found a Bug?</Text>
                   {"\n"}If the system crashes, fails to print receipts, or experiences database errors during a shift, please report it immediately to the developers using the emails provided above.
