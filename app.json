@@ -38,10 +38,11 @@
     },
     "extra": {
       "router": {},
+      "gcashSimulate": true,
       "eas": {
-        "projectId": "25d82345-7264-44ee-be80-29837792d15a"
-      },
-      "gcashSimulate": true
-    }
+        "projectId": "ae2ecedc-4fba-4cb8-8f2f-71ea4f84b691"
+      }
+    },
+    "owner": "eithanserrano"
   }
 }

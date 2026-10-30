@@ -10,3 +10,10 @@ service cloud.firestore {
     // or it will lock out your other collections.
   }
 }
+
+// Time clock rules to merge into your existing rules (staff can only touch their own entries):
+//   match /timeclock/{id} {
+//     allow read: if request.auth != null && resource.data.uid == request.auth.uid;
+//     allow create: if request.auth != null && request.resource.data.uid == request.auth.uid;
+//     allow update: if request.auth != null && resource.data.uid == request.auth.uid;
+//   }

@@ -258,6 +258,18 @@ export default function HomeScreen() {
             <TouchableOpacity
               style={styles.buttonAction}
               activeOpacity={0.8}
+              onPress={() => router.push('/timeclock')}
+            >
+              <Ionicons
+                name="time-outline"
+                size={isMobile ? s(45) : s(35)}
+                color={currentColors.textMain}
+              />
+              <Text style={styles.buttonActionText}>Clock In</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.buttonAction}
+              activeOpacity={0.8}
               onPress={() => router.push('/help')}
             >
               <Ionicons

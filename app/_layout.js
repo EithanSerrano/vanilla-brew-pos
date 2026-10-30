@@ -76,6 +76,7 @@ export default function RootLayout() {
         <Stack.Screen name="login" />
         <Stack.Screen name="home" />
         <Stack.Screen name="sales" />
+        <Stack.Screen name="timeclock" />
         <Stack.Screen name="help" />
         <Stack.Screen name="about" />
         <Stack.Screen name="settings" />

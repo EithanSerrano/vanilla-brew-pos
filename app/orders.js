@@ -12,6 +12,7 @@ import {
   StatusBar,
   StyleSheet,
   Text,
+  TextInput,
   TouchableOpacity,
   UIManager,
   useWindowDimensions,
@@ -34,6 +35,7 @@ import { useAuth } from '../constants/AuthContext';
 import { canManageOrders, canSeeOrder } from '../constants/roles';
 import { useAppTheme } from '../constants/ThemeContext';
 import { db } from '../firebaseConfig';
+import { CANCEL_REASONS, cancelOngoingSale } from '../lib/cancelOrder';
 
 if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
   UIManager.setLayoutAnimationEnabledExperimental(true);
@@ -43,6 +45,7 @@ const getStatusStyle = (status) => {
   switch (status) {
     case 'Returned': return { bg: '#FFF3E0', icon: 'return-up-back-outline', color: '#D97B39' };
     case 'Refunded': return { bg: '#FFE5E5', icon: 'cash-outline', color: '#C0392B' };
+    case 'Canceled': return { bg: '#ECEFF1', icon: 'close-circle-outline', color: '#6B7280' };
     case 'Ongoing':  return { bg: '#FFFDE7', icon: 'time-outline', color: '#F59E0B' };
     default: return { bg: '#E4F4EC', icon: 'checkmark-done', color: '#0A5A3A' };
   }
@@ -98,6 +101,13 @@ export default function OrdersScreen() {
 
   const [statusChangeModalVisible, setStatusChangeModalVisible] = useState(false);
   const [statusChangeTarget, setStatusChangeTarget] = useState(null);
+
+  const [cancelTarget, setCancelTarget] = useState(null);
+  const [cancelReason, setCancelReason] = useState('');
+  const [cancelNote, setCancelNote] = useState('');
+  const [canceling, setCanceling] = useState(false);
+  const [cancelError, setCancelError] = useState('');
+  const [cancelResult, setCancelResult] = useState(null);
 
 
 
@@ -243,6 +253,27 @@ export default function OrdersScreen() {
       await updateDoc(orderRef, { status: 'Completed' });
     } catch (error) {
       console.error("Error completing order:", error);
+    }
+  };
+
+  const closeCancel = () => {
+    setCancelTarget(null); setCancelReason(''); setCancelNote(''); setCancelError(''); setCanceling(false);
+  };
+
+  const handleCancelOrder = async () => {
+    const reason = cancelReason === 'Other' ? cancelNote.trim() : cancelReason;
+    if (!reason) { setCancelError('Select a reason (or describe it for "Other").'); return; }
+    setCanceling(true);
+    setCancelError('');
+    try {
+      const result = await cancelOngoingSale(cancelTarget.docId, { reason, canceledBy: staffName || user?.email || 'Unknown' });
+      closeCancel();
+      setReceiptVisible(false);
+      setCancelResult(result);
+    } catch (error) {
+      console.error('Cancel order error:', error);
+      setCancelError(error.message || 'Could not cancel the order.');
+      setCanceling(false);
     }
   };
 
@@ -414,7 +445,7 @@ export default function OrdersScreen() {
         <View style={styles.mainContent}>
           <View style={styles.mainWhiteBox}>
             <View style={styles.boxHeader}>
-              <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
+              <TouchableOpacity style={styles.backButton} onPress={() => (router.canGoBack() ? router.back() : router.replace('/home'))}>
                 <Ionicons name="chevron-back" size={s(24)} color={currentColors.textMain} />
               </TouchableOpacity>
               <Text style={styles.boxTitle}>Ongoing Orders</Text>
@@ -460,6 +491,14 @@ export default function OrdersScreen() {
                   </TouchableOpacity>
                  
                   <View style={styles.orderActionCol}>
+                    <TouchableOpacity
+                      style={styles.cancelOrderBtn}
+                      activeOpacity={0.8}
+                      onPress={() => setCancelTarget(order)}
+                    >
+                      <Ionicons name="ban-outline" size={s(20)} color="#FFFFFF" />
+                      <Text style={styles.completeBtnText}>Cancel Order</Text>
+                    </TouchableOpacity>
                     <TouchableOpacity
                       style={styles.completeBtn}
                       activeOpacity={0.8}
@@ -571,6 +610,15 @@ export default function OrdersScreen() {
               <View style={styles.receiptHeader}>
                 <Text style={styles.receiptTitle}>Transaction Details</Text>
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: s(15) }}>
+                  {selectedOrder.status === 'Ongoing' && (
+                    <TouchableOpacity
+                      style={styles.cancelOrderBtn}
+                      onPress={() => setCancelTarget(selectedOrder)}
+                    >
+                      <Ionicons name="ban-outline" size={s(22)} color="#FFFFFF" />
+                      <Text style={styles.printBtnText}>Cancel Order</Text>
+                    </TouchableOpacity>
+                  )}
                   <TouchableOpacity
                     style={styles.printBtn}
                     onPress={() => printReceipt(selectedOrder)}
@@ -735,6 +783,81 @@ export default function OrdersScreen() {
               onPress={() => { setStatusChangeModalVisible(false); setStatusChangeTarget(null); }}
             >
               <Text style={styles.statusCancelBtnText}>Cancel</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+
+      {/* --- CANCEL ORDER MODAL --- */}
+      <Modal animationType="fade" transparent visible={!!cancelTarget} onRequestClose={closeCancel}>
+        <View style={styles.modalOverlay}>
+          <View style={styles.statusChangeModalContainer}>
+            <Text style={styles.statusChangeTitle}>Cancel Order</Text>
+            {cancelTarget && (
+              <Text style={styles.statusChangeSubtitle}>
+                Cancel {cancelTarget.id}? Ingredients and materials used by this order will be returned to stock.
+              </Text>
+            )}
+
+            <View style={{ width: '100%', gap: s(10) }}>
+              {CANCEL_REASONS.map((r) => {
+                const selected = cancelReason === r;
+                return (
+                  <TouchableOpacity
+                    key={r}
+                    style={[styles.reasonOption, selected && styles.reasonOptionSelected]}
+                    onPress={() => { setCancelReason(r); setCancelError(''); }}
+                    activeOpacity={0.7}
+                  >
+                    <Ionicons name={selected ? 'radio-button-on' : 'radio-button-off'} size={s(22)} color={selected ? '#C0392B' : currentColors.textSub} />
+                    <Text style={styles.reasonText}>{r}</Text>
+                  </TouchableOpacity>
+                );
+              })}
+              {cancelReason === 'Other' && (
+                <TextInput
+                  value={cancelNote}
+                  onChangeText={(v) => { setCancelNote(v); setCancelError(''); }}
+                  placeholder="Describe the reason"
+                  placeholderTextColor={currentColors.textSub}
+                  style={styles.reasonInput}
+                />
+              )}
+            </View>
+
+            {!!cancelError && <Text style={styles.cancelErrorText}>{cancelError}</Text>}
+
+            <View style={{ flexDirection: 'row', gap: s(15), width: '100%' }}>
+              <TouchableOpacity style={[styles.statusCancelBtn, { flex: 1, width: undefined }]} onPress={closeCancel} disabled={canceling}>
+                <Text style={styles.statusCancelBtnText}>Keep Order</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.statusCancelBtn, { flex: 1, width: undefined, backgroundColor: '#C0392B', opacity: canceling ? 0.6 : 1 }]}
+                onPress={handleCancelOrder}
+                disabled={canceling}
+              >
+                <Text style={[styles.statusCancelBtnText, { color: '#FFFFFF' }]}>{canceling ? 'Canceling…' : 'Cancel Order'}</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* --- CANCEL RESULT MODAL --- */}
+      <Modal animationType="fade" transparent visible={!!cancelResult} onRequestClose={() => setCancelResult(null)}>
+        <View style={styles.modalOverlay}>
+          <View style={styles.statusChangeModalContainer}>
+            <Text style={styles.statusChangeTitle}>Order Canceled</Text>
+            {cancelResult && (
+              <Text style={styles.statusChangeSubtitle}>
+                {cancelResult.number} was canceled.{' '}
+                {cancelResult.stockRestored
+                  ? `${cancelResult.restored.length} stock item(s) were returned to inventory.`
+                  : 'No stock record was found for this order, so inventory was not changed.'}
+              </Text>
+            )}
+            <TouchableOpacity style={styles.statusCancelBtn} onPress={() => setCancelResult(null)}>
+              <Text style={styles.statusCancelBtnText}>OK</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -971,7 +1094,7 @@ const getStyles = (s, width, colors) => StyleSheet.create({
     flexShrink: 1,
     maxWidth: '40%' 
   },
-  orderActionCol: { paddingRight: s(15), justifyContent: 'center' },
+  orderActionCol: { paddingRight: s(15), flexDirection: 'row', alignItems: 'center', gap: s(10) },
 
   priceText: {
     fontFamily: 'Lexend_700Bold',
@@ -989,6 +1112,39 @@ const getStyles = (s, width, colors) => StyleSheet.create({
     borderRadius: s(12),
     gap: s(8)
   },
+  cancelOrderBtn: {
+    backgroundColor: '#C0392B',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: s(20),
+    paddingVertical: s(12),
+    borderRadius: s(12),
+    gap: s(8)
+  },
+  reasonOption: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: s(12),
+    paddingVertical: s(12),
+    paddingHorizontal: s(16),
+    borderRadius: s(12),
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  reasonOptionSelected: { borderColor: '#C0392B', backgroundColor: '#FFE5E5' },
+  reasonText: { fontFamily: 'Lexend_400Regular', fontSize: s(18), color: colors.textMain },
+  reasonInput: {
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: s(12),
+    paddingHorizontal: s(16),
+    paddingVertical: s(12),
+    fontFamily: 'Lexend_400Regular',
+    fontSize: s(18),
+    color: colors.textMain,
+  },
+  cancelErrorText: { fontFamily: 'Lexend_400Regular', fontSize: s(16), color: '#C0392B', textAlign: 'center' },
   completeBtnText: {
     fontFamily: 'Lexend_700Bold',
     fontSize: s(16),
